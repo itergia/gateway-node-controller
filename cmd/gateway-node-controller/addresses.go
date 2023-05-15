@@ -67,9 +67,13 @@ func updateAddresses(ctx context.Context, gw *gwapi.Gateway, name types.Namespac
 
 	var addrs []gwapi.GatewayAddress
 	for _, node := range nodes.Items {
+		if !isNodeConditionTrue(node.Status.Conditions, core.NodeReady) {
+			continue
+		}
+
 		for _, addr := range node.Status.Addresses {
-			if addr.Type == "InternalIP" {
-				addrs = append(addrs, gwapi.GatewayAddress{Type: ptrTo(gwapi.AddressType("IPAddress")), Value: addr.Address})
+			if addr.Type == core.NodeInternalIP {
+				addrs = append(addrs, gwapi.GatewayAddress{Type: ptrTo(gwapi.AddressType(gwapi.IPAddressType)), Value: addr.Address})
 			}
 		}
 	}
@@ -83,6 +87,16 @@ func updateAddresses(ctx context.Context, gw *gwapi.Gateway, name types.Namespac
 	gw.Spec.Addresses = addrs
 
 	return true, nil
+}
+
+func isNodeConditionTrue(conds []core.NodeCondition, condType core.NodeConditionType) bool {
+	for _, cond := range conds {
+		if cond.Type == condType {
+			return cond.Status == core.ConditionTrue
+		}
+	}
+
+	return false
 }
 
 func ptrTo[T any](v T) *T {
