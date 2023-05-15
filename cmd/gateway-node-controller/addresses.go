@@ -39,7 +39,15 @@ func mapNode(obj client.Object) []reconcile.Request {
 				continue
 			}
 
-			ss := strings.SplitN(k[len(gatewayNodeKeyPrefix):], "/", 1)
+			ss := strings.SplitN(k[len(gatewayNodeKeyPrefix):], "/", 2)
+			if len(ss) < 2 {
+				continue
+			}
+			ss = strings.SplitN(ss[1], ".", 2)
+			if len(ss) < 2 {
+				continue
+			}
+
 			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{
 				Namespace: ss[0],
 				Name:      ss[1],
@@ -52,7 +60,7 @@ func mapNode(obj client.Object) []reconcile.Request {
 
 func updateAddresses(ctx context.Context, gw *gwapi.Gateway, name types.NamespacedName, cl client.Client) (bool, error) {
 	var nodes core.NodeList
-	err := cl.List(ctx, &nodes, client.MatchingLabels{gatewayNodeKeyPrefix + name.String(): ""})
+	err := cl.List(ctx, &nodes, client.MatchingLabels{gatewayNodeKeyPrefix + name.Namespace + "." + name.Name: ""})
 	if err != nil {
 		return false, err
 	}
@@ -61,7 +69,7 @@ func updateAddresses(ctx context.Context, gw *gwapi.Gateway, name types.Namespac
 	for _, node := range nodes.Items {
 		for _, addr := range node.Status.Addresses {
 			if addr.Type == "InternalIP" {
-				addrs = append(addrs, gwapi.GatewayAddress{Value: addr.Address})
+				addrs = append(addrs, gwapi.GatewayAddress{Type: ptrTo(gwapi.AddressType("IPAddress")), Value: addr.Address})
 			}
 		}
 	}
@@ -75,4 +83,8 @@ func updateAddresses(ctx context.Context, gw *gwapi.Gateway, name types.Namespac
 	gw.Spec.Addresses = addrs
 
 	return true, nil
+}
+
+func ptrTo[T any](v T) *T {
+	return &v
 }

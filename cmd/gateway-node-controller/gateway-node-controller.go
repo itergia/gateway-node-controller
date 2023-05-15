@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -17,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	core "k8s.io/api/core/v1"
 	gwapi "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -43,7 +45,15 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	mgr, err := manager.New(cfg, manager.Options{})
+	sch := runtime.NewScheme()
+	if err := core.AddToScheme(sch); err != nil {
+		return err
+	}
+	if err := gwapi.AddToScheme(sch); err != nil {
+		return err
+	}
+
+	mgr, err := manager.New(cfg, manager.Options{Scheme: sch})
 	if err != nil {
 		return err
 	}
@@ -98,7 +108,7 @@ func (a *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 		return reconcile.Result{}, err
 	}
 
-	log.Info("Updating Gateway", "name", req.NamespacedName)
+	log.Info("Updating Gateway", "name", req.NamespacedName, "addresses", gw.Spec.Addresses)
 
 	return reconcile.Result{}, a.cl.Update(ctx, &gw)
 }
