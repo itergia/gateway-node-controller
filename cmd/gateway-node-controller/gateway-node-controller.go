@@ -61,7 +61,7 @@ func run(ctx context.Context) error {
 	b := builder.
 		ControllerManagedBy(mgr).
 		For(&gwapi.Gateway{})
-	b = initNodes(b)
+	b = initPods(b)
 
 	if err := b.Complete(&gatewayReconciler{}); err != nil {
 		return err

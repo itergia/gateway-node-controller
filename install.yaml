@@ -12,7 +12,7 @@ metadata:
 rules:
 - apiGroups: [""]
   resources:
-  - nodes
+  - pods
   verbs:
   - get
   - list
@@ -60,5 +60,5 @@ spec:
       serviceAccountName: gateway-node-controller
       containers:
       - name: gateway-controller
-        image: docker.io/githubtommie/gateway-node-controller:v0.1.0
+        image: docker.io/githubtommie/gateway-node-controller:v0.2.0
         imagePullPolicy: Always
